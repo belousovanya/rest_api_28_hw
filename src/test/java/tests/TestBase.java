@@ -1,5 +1,6 @@
 package tests;
 
+import helpers.CustomApiListener;
 import io.restassured.filter.log.LogDetail;
 import io.restassured.filter.log.RequestLoggingFilter;
 import io.restassured.filter.log.ResponseLoggingFilter;
@@ -10,7 +11,9 @@ import static io.restassured.RestAssured.*;
 public class TestBase {
     @BeforeAll
     public static void setupTests() {
-        filters(new RequestLoggingFilter(LogDetail.BODY), new ResponseLoggingFilter(LogDetail.BODY),
+        filters(CustomApiListener.withCustomTemplates(),
+                new RequestLoggingFilter(LogDetail.BODY),
+                new ResponseLoggingFilter(LogDetail.BODY),
                 new ResponseLoggingFilter(LogDetail.STATUS));
 
         baseURI = "https://reqres.in/";
