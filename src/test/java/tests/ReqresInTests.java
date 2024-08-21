@@ -1,113 +1,192 @@
 package tests;
 
+import models.*;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import static io.qameta.allure.Allure.step;
 import static io.restassured.RestAssured.given;
 import static io.restassured.http.ContentType.JSON;
-import static org.apache.http.HttpStatus.*;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static specs.ResponseSpecs.*;
 
 public class ReqresInTests extends TestBase {
     @Test
+    @DisplayName("Проверка получения списка пользователей на странице")
+
     public void getUsersListTest() {
-        given()
-                .when()
-                .get("users?page=2")
-                .then()
-                .statusCode(SC_OK)
-                .body("page", is(2))
-                .body("per_page", is(6))
-                .body("total", is(12))
-                .body("total_pages", is(2))
-                .body("data", hasSize(6))
+        UserListResponseModel response =
+                step("Отправка GET-запроса на получение списка пользователей на странице", () ->
+                        given()
+                                .when()
+                                .get("users?page=2")
+                                .then()
+                                .spec(successResponseSpec)
+                                .extract().as(UserListResponseModel.class)
+                );
 
-                .body("data[0].id", is(7))
-                .body("data[0].email", is("michael.lawson@reqres.in"))
-                .body("data[0].first_name", is("Michael"))
-                .body("data[0].last_name", is("Lawson"))
-                .body("data[0].avatar", is("https://reqres.in/img/faces/7-image.jpg"))
+        step("Проверка основных параметров ответа", () -> {
+            assertEquals(response.getPage(), 2);
+            assertEquals(response.getPerPage(), 6);
+            assertEquals(response.getTotal(), 12);
+            assertEquals(response.getTotalPages(), 2);
+        });
 
-                .body("data[5].id", is(12))
-                .body("data[5].email", is("rachel.howell@reqres.in"))
-                .body("data[5].first_name", is("Rachel"))
-                .body("data[5].last_name", is("Howell"))
-                .body("data[5].avatar", is("https://reqres.in/img/faces/12-image.jpg"))
+        UserDataModel firstUser = response.getData().get(0);
+        step("Проверка данных первого пользователя", () -> {
+            assertEquals(firstUser.getId(), 7);
+            assertEquals(firstUser.getEmail(), "michael.lawson@reqres.in");
+            assertEquals(firstUser.getFirstName(), "Michael");
+            assertEquals(firstUser.getLastName(), "Lawson");
+            assertEquals(firstUser.getAvatar(), "https://reqres.in/img/faces/7-image.jpg");
+        });
 
-                .body("support.url", is("https://reqres.in/#support-heading"))
-                .body("support.text", is("To keep ReqRes free, contributions towards server costs are appreciated!"));
+        UserDataModel lastUser = response.getData().get(5);
+        step("Проверка данных последнего пользователя", () -> {
+            assertEquals(lastUser.getId(), 12);
+            assertEquals(lastUser.getEmail(), "rachel.howell@reqres.in");
+            assertEquals(lastUser.getFirstName(), "Rachel");
+            assertEquals(lastUser.getLastName(), "Howell");
+            assertEquals(lastUser.getAvatar(), "https://reqres.in/img/faces/12-image.jpg");
+
+            step("Проверка информации о поддержке");
+            assertEquals(response.getSupport().getUrl(), "https://reqres.in/#support-heading");
+            assertEquals(response.getSupport().getText(),
+                    "To keep ReqRes free, contributions towards server costs are appreciated!");
+        });
     }
 
+
     @Test
+    @DisplayName("Проверка создания пользователя")
+
     public void createUserTest() {
+        step("Создание пользователя с параметрами 'Name' и 'Job'", () -> {
+            UserRequestModel userData = new UserRequestModel();
+            userData.setName("Anna");
+            userData.setJob("AQA");
 
-        String userData = "{\"name\": \"Anna\", \"job\": \"AQA\"}";
+            UserResponseModel userResponse =
+                    step("Отправка POST-запроса на создание пользователя", () ->
+                            given()
+                                    .body(userData)
+                                    .contentType(JSON)
+                                    .when()
+                                    .post("users")
+                                    .then()
+                                    .spec(createdResponseSpec)
+                                    .extract().as(UserResponseModel.class)
+                    );
 
-        given()
-                .body(userData)
-                .contentType(JSON)
-                .when()
-                .post("users")
-                .then()
-                .statusCode(SC_CREATED)
-                .body("name", is("Anna"))
-                .body("job", is("AQA"));
+            step("Проверка данных созданного пользователя", () -> {
+                assertEquals(userResponse.getName(), "Anna");
+                assertEquals(userResponse.getJob(), "AQA");
+                assertNotNull(userResponse.getId());
+                assertNotNull(userResponse.getCreatedAt());
+            });
+        });
     }
 
     @Test
+    @DisplayName("Обновление данных пользователя")
+
     public void updateUserTest() {
-        String updatedUserData = "{\"name\": \"Hanna\", \"job\": \"QA\"}";
-        given()
-                .body(updatedUserData)
-                .contentType(JSON)
-                .when()
-                .put("users/2")
-                .then()
-                .statusCode(SC_OK)
-                .body("name", is("Hanna"))
-                .body("job", is("QA"));
+        step("Обновление данных 'Name' и 'Job'", () -> {
+            UserRequestModel updatedUserData = new UserRequestModel();
+            updatedUserData.setName("Hanna");
+            updatedUserData.setJob("QA");
+
+            UserResponseModel response =
+                    step("Отправка PUT-запроса на обновление пользователя", () ->
+                            given()
+                                    .body(updatedUserData)
+                                    .contentType(JSON)
+                                    .when()
+                                    .put("users/2")
+                                    .then()
+                                    .spec(successResponseSpec)
+                                    .extract().as(UserResponseModel.class)
+                    );
+
+            step("Проверка данных обновленного пользователя", () -> {
+                assertEquals(response.getName(), "Hanna");
+                assertEquals(response.getJob(), "QA");
+                assertNotNull(response.getUpdatedAt());
+            });
+        });
     }
 
     @Test
+    @DisplayName("Проверка неудачной попытки входа без пароля")
+
     public void unsuccessfulLoginTest() {
-        String email = "{\"email\": \"qa@guru\"}";
-        given()
-                .body(email)
-                .contentType(JSON)
-                .when()
-                .post("login")
-                .then()
-                .statusCode(SC_BAD_REQUEST)
-                .body("error", is("Missing password"));
+        step("Проверка входа без пароля", () -> {
+            LoginRequestModel requestLogin = new LoginRequestModel();
+            requestLogin.setEmail("qa@guru");
+
+            ErrorResponseModel errorResponse =
+                    step("Отправка POST-запроса на вход без пароля", () ->
+                            given()
+                                    .body(requestLogin)
+                                    .contentType(JSON)
+                                    .when()
+                                    .post("login")
+                                    .then()
+                                    .spec(badRequestResponseSpec)
+                                    .extract().as(ErrorResponseModel.class)
+                    );
+
+            step("Проверка сообщения об ошибке", () -> {
+                assertEquals(errorResponse.getError(), "Missing password");
+            });
+        });
     }
 
     @Test
+    @DisplayName("Получение списка пользователей с задержкой 3 секунды")
+
     public void getUsersListWithDelayTest() {
-        given()
-                .queryParam("delay", 3)
-                .when()
-                .get("users")
-                .then()
-                .statusCode(SC_OK)
-                .body("page", is(1))
-                .body("per_page", is(6))
-                .body("total", is(12))
-                .body("total_pages", is(2))
-                .body("data", hasSize(6))
+        UserListResponseModel response =
+                step("Отправка GET-запроса на получение списка пользователей с задержкой", () ->
+                        given()
+                                .queryParam("delay", 3)
+                                .when()
+                                .get("users")
+                                .then()
+                                .spec(successResponseSpec)
+                                .extract().as(UserListResponseModel.class)
+                );
 
-                .body("data[0].id", is(1))
-                .body("data[0].email", is("george.bluth@reqres.in"))
-                .body("data[0].first_name", is("George"))
-                .body("data[0].last_name", is("Bluth"))
-                .body("data[0].avatar", is("https://reqres.in/img/faces/1-image.jpg"))
+        step("Проверка основных параметров ответа", () -> {
+            assertEquals(response.getPage(), 1);
+            assertEquals(response.getPerPage(), 6);
+            assertEquals(response.getTotal(), 12);
+            assertEquals(response.getTotalPages(), 2);
+        });
 
-                .body("data[5].id", is(6))
-                .body("data[5].email", is("tracey.ramos@reqres.in"))
-                .body("data[5].first_name", is("Tracey"))
-                .body("data[5].last_name", is("Ramos"))
-                .body("data[5].avatar", is("https://reqres.in/img/faces/6-image.jpg"))
+        UserDataModel firstUser = response.getData().get(0);
+        step("Проверка данных первого пользователя", () -> {
+            assertEquals(firstUser.getId(), 1);
+            assertEquals(firstUser.getEmail(), "george.bluth@reqres.in");
+            assertEquals(firstUser.getFirstName(), "George");
+            assertEquals(firstUser.getLastName(), "Bluth");
+            assertEquals(firstUser.getAvatar(), "https://reqres.in/img/faces/1-image.jpg");
+        });
 
-                .body("support.url", is("https://reqres.in/#support-heading"))
-                .body("support.text", is("To keep ReqRes free, contributions towards server costs are appreciated!"));
+        UserDataModel lastUser = response.getData().get(5);
+        step("Проверка данных последнего пользователя", () -> {
+            assertEquals(lastUser.getId(), 6);
+            assertEquals(lastUser.getEmail(), "tracey.ramos@reqres.in");
+            assertEquals(lastUser.getFirstName(), "Tracey");
+            assertEquals(lastUser.getLastName(), "Ramos");
+            assertEquals(lastUser.getAvatar(), "https://reqres.in/img/faces/6-image.jpg");
+        });
+
+        step("Проверка информации о поддержке", () -> {
+            assertEquals(response.getSupport().getUrl(), "https://reqres.in/#support-heading");
+            assertEquals(response.getSupport().getText(),
+                    "To keep ReqRes free, contributions towards server costs are appreciated!");
+        });
     }
 }
