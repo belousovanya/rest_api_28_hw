@@ -6,23 +6,24 @@ import org.junit.jupiter.api.Test;
 
 import static io.qameta.allure.Allure.step;
 import static io.restassured.RestAssured.given;
-import static io.restassured.http.ContentType.JSON;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static specs.RequestSpec.requestSpec;
 import static specs.ResponseSpecs.*;
 
 public class ReqresInTests extends TestBase {
+
     @Test
     @DisplayName("Проверка получения списка пользователей на странице")
-
     public void getUsersListTest() {
         UserListResponseModel response =
                 step("Отправка GET-запроса на получение списка пользователей на странице", () ->
                         given()
+                                .spec(requestSpec)
                                 .when()
                                 .get("users?page=2")
                                 .then()
-                                .spec(successResponseSpec)
+                                .spec(successResponseSpec200)
                                 .extract().as(UserListResponseModel.class)
                 );
 
@@ -49,18 +50,17 @@ public class ReqresInTests extends TestBase {
             assertEquals(lastUser.getFirstName(), "Rachel");
             assertEquals(lastUser.getLastName(), "Howell");
             assertEquals(lastUser.getAvatar(), "https://reqres.in/img/faces/12-image.jpg");
+        });
 
-            step("Проверка информации о поддержке");
+        step("Проверка информации о поддержке", () -> {
             assertEquals(response.getSupport().getUrl(), "https://reqres.in/#support-heading");
             assertEquals(response.getSupport().getText(),
                     "To keep ReqRes free, contributions towards server costs are appreciated!");
         });
     }
 
-
     @Test
     @DisplayName("Проверка создания пользователя")
-
     public void createUserTest() {
         step("Создание пользователя с параметрами 'Name' и 'Job'", () -> {
             UserRequestModel userData = new UserRequestModel();
@@ -70,12 +70,12 @@ public class ReqresInTests extends TestBase {
             UserResponseModel userResponse =
                     step("Отправка POST-запроса на создание пользователя", () ->
                             given()
+                                    .spec(requestSpec)
                                     .body(userData)
-                                    .contentType(JSON)
                                     .when()
                                     .post("users")
                                     .then()
-                                    .spec(createdResponseSpec)
+                                    .spec(createdResponseSpec201)
                                     .extract().as(UserResponseModel.class)
                     );
 
@@ -90,7 +90,6 @@ public class ReqresInTests extends TestBase {
 
     @Test
     @DisplayName("Обновление данных пользователя")
-
     public void updateUserTest() {
         step("Обновление данных 'Name' и 'Job'", () -> {
             UserRequestModel updatedUserData = new UserRequestModel();
@@ -100,12 +99,12 @@ public class ReqresInTests extends TestBase {
             UserResponseModel response =
                     step("Отправка PUT-запроса на обновление пользователя", () ->
                             given()
+                                    .spec(requestSpec)
                                     .body(updatedUserData)
-                                    .contentType(JSON)
                                     .when()
                                     .put("users/2")
                                     .then()
-                                    .spec(successResponseSpec)
+                                    .spec(successResponseSpec200)
                                     .extract().as(UserResponseModel.class)
                     );
 
@@ -119,7 +118,6 @@ public class ReqresInTests extends TestBase {
 
     @Test
     @DisplayName("Проверка неудачной попытки входа без пароля")
-
     public void unsuccessfulLoginTest() {
         step("Проверка входа без пароля", () -> {
             LoginRequestModel requestLogin = new LoginRequestModel();
@@ -128,12 +126,12 @@ public class ReqresInTests extends TestBase {
             ErrorResponseModel errorResponse =
                     step("Отправка POST-запроса на вход без пароля", () ->
                             given()
+                                    .spec(requestSpec)
                                     .body(requestLogin)
-                                    .contentType(JSON)
                                     .when()
                                     .post("login")
                                     .then()
-                                    .spec(badRequestResponseSpec)
+                                    .spec(badRequestResponseSpec400)
                                     .extract().as(ErrorResponseModel.class)
                     );
 
@@ -145,16 +143,16 @@ public class ReqresInTests extends TestBase {
 
     @Test
     @DisplayName("Получение списка пользователей с задержкой 3 секунды")
-
     public void getUsersListWithDelayTest() {
         UserListResponseModel response =
                 step("Отправка GET-запроса на получение списка пользователей с задержкой", () ->
                         given()
+                                .spec(requestSpec)
                                 .queryParam("delay", 3)
                                 .when()
                                 .get("users")
                                 .then()
-                                .spec(successResponseSpec)
+                                .spec(successResponseSpec200)
                                 .extract().as(UserListResponseModel.class)
                 );
 
