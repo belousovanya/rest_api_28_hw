@@ -1,21 +1,13 @@
 package tests;
 
-import helpers.CustomApiListener;
-import io.restassured.filter.log.LogDetail;
-import io.restassured.filter.log.RequestLoggingFilter;
-import io.restassured.filter.log.ResponseLoggingFilter;
 import org.junit.jupiter.api.BeforeAll;
 
-import static io.restassured.RestAssured.*;
+import static io.restassured.RestAssured.basePath;
+import static io.restassured.RestAssured.baseURI;
 
 public class TestBase {
     @BeforeAll
     public static void setupTests() {
-        filters(CustomApiListener.withCustomTemplates(),
-                new RequestLoggingFilter(LogDetail.BODY),
-                new ResponseLoggingFilter(LogDetail.BODY),
-                new ResponseLoggingFilter(LogDetail.STATUS));
-
         baseURI = "https://reqres.in/";
         basePath = "/api";
     }
