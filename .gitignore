@@ -1,0 +1,16 @@
+build/
+!**/src/main/**
+!**/src/test/**
+.DS_Store
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### Gradle ###
+.gradle
+
+### Logs ###
+*.log
